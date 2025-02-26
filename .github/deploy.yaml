@@ -1,0 +1,45 @@
+name: Deploy Go Web App to AWS EC2
+
+on:
+  push:
+    branches:
+      - main  # Run this workflow when pushing to the 'main' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'  # Change to your Go version
+
+      - name: Build Go Application
+        run: |
+          go build -o go-web-app main.go  # Adjust if your main file is different
+
+      - name: Copy Files to AWS EC2 via SSH
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.AWS_SSH_HOST }}
+          username: ${{ secrets.AWS_SSH_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: "go-web-app"
+          target: "~/go-web-app"
+
+      - name: Deploy Go Application on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_SSH_HOST }}
+          username: ${{ secrets.AWS_SSH_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            sudo systemctl stop go-web-app || true
+            sudo mv ~/go-web-app/go-web-app /usr/local/bin/
+            sudo chmod +x /usr/local/bin/go-web-app
+            sudo systemctl start go-web-app
+            sudo systemctl status go-web-app
