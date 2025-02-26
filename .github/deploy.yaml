@@ -43,3 +43,11 @@ jobs:
             sudo chmod +x /usr/local/bin/go-web-app
             sudo systemctl start go-web-app
             sudo systemctl status go-web-app
+
+      - name: Set up SSH Key
+  run: |
+    mkdir -p ~/.ssh
+    echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+    chmod 600 ~/.ssh/id_rsa
+    ssh-keyscan -H <your-ec2-public-ip> >> ~/.ssh/known_hosts
+
