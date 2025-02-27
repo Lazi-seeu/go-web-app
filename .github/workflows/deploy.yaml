@@ -35,8 +35,14 @@ jobs:
           key: ${{ secrets.AWS_SSH_KEY }}
           source: "go-web-app"
           target: "/home/ec2-user/"
-          timeout: 60
-          key_path: key.pem  # ✅ Explicitly set the SSH key path
+          timeout: "60s"         # ✅ Use seconds (e.g., "60s", "30s")
+          key_path: key.pem
+          port: 22
+          protocol: tcp
+          command_timeout: "10m"  # ✅ Use minutes (e.g., "10m")
+          tar_exec: tar
+          proxy_port: 22
+          proxy_timeout: "30s"    # ✅ Use seconds (e.g., "30s")
 
       - name: Deploy and Start Go Application on EC2
         uses: appleboy/ssh-action@master
