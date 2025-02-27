@@ -1,4 +1,4 @@
-kname: Deploy Go Web App to AWS EC2
+name: Deploy Go Web App to AWS EC2
 
 on:
   push:
