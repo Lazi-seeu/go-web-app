@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # ✅ Use the EC2 instance as the GitHub Actions runner
 
     steps:
       - name: Checkout Repository
@@ -16,41 +16,45 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.22'  # ✅ Ensure correct Go version
 
       - name: Build Go Application
         run: |
           go build -o go-web-app main.go
+          chmod +x go-web-app  # ✅ Ensure executable permissions
 
-      - name: Setup SSH Key (Fix Permissions)
+      - name: Move Go Binary to Correct Location
         run: |
-          echo "${{ secrets.AWS_SSH_KEY }}" > key.pem
-          chmod 600 key.pem  # 🔹 Fix permission error
+          sudo mv go-web-app /usr/local/bin/go-web-app
+          sudo chmod +x /usr/local/bin/go-web-app
 
-      - name: Copy Files to AWS EC2 via SSH
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.AWS_SSH_HOST }}
-          username: ec2-user
-          key: ${{ secrets.AWS_SSH_KEY }}
-          source: "go-web-app"
-          target: "/home/ec2-user/"
-          timeout: "60s"
-          key_path: key.pem
-          port: 22
-          protocol: tcp
-          command_timeout: "10m"
-          tar_exec: tar
-          proxy_port: 22
-          proxy_timeout: "30s"
+      - name: Configure Systemd Service
+        run: |
+          echo "✅ Creating systemd service..."
+          echo "[Unit]
+          Description=Go Web Application
+          After=network.target
 
-      - name: Deploy and Start Go Application on EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.AWS_SSH_HOST }}
-          username: ec2-user
-          key: ${{ secrets.AWS_SSH_KEY }}
-          script: |
-            set -e  # Exit on error
-            echo "✅ Stopping any existing service..."
-            sudo systemc
+          [Service]
+          ExecStart=/usr/local/bin/go-web-app -host 0.0.0.0 -port 8080
+          Restart=always
+          User=ec2-user
+          WorkingDirectory=/home/ec2-user
+          Environment=PORT=8080
+          StandardOutput=journal
+          StandardError=journal
+
+          [Install]
+          WantedBy=multi-user.target" | sudo tee /etc/systemd/system/go-web-app.service
+
+          echo "✅ Reloading systemd..."
+          sudo systemctl daemon-reload
+          sudo systemctl enable go-web-app
+
+      - name: Restart and Verify Service
+        run: |
+          echo "✅ Restarting Go Web App Service..."
+          sudo systemctl restart go-web-app
+
+          echo "✅ Checking service logs..."
+          sudo systemctl status go-web-app --no-pager || sudo journalctl -xe --no-pager
