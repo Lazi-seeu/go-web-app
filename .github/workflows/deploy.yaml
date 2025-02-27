@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'  # Ensure Go version is correct
+          go-version: '1.22'  # ✅ Ensure correct Go version
 
       - name: Build Go Application
         run: |
@@ -31,27 +31,28 @@ jobs:
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.AWS_SSH_HOST }}
-          username: ec2-user  # ✅ Ensure we use the correct EC2 user
+          username: ec2-user
           key: ${{ secrets.AWS_SSH_KEY }}
           source: "go-web-app"
           target: "/home/ec2-user/"
-          timeout: "60s"         # ✅ Use seconds (e.g., "60s", "30s")
+          timeout: "60s"
           key_path: key.pem
           port: 22
           protocol: tcp
-          command_timeout: "10m"  # ✅ Use minutes (e.g., "10m")
+          command_timeout: "10m"
           tar_exec: tar
           proxy_port: 22
-          proxy_timeout: "30s"    # ✅ Use seconds (e.g., "30s")
+          proxy_timeout: "30s"
 
       - name: Deploy and Start Go Application on EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AWS_SSH_HOST }}
-          username: ec2-user  # ✅ Ensure we use the correct EC2 user
+          username: ec2-user
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            set -e  # Exit on error
+            set -e  # Stop script on any error
+
             echo "✅ Stopping any existing service..."
             sudo systemctl stop go-web-app || true
 
@@ -81,8 +82,8 @@ jobs:
             echo "✅ Reloading systemd and starting service..."
             sudo systemctl daemon-reload
             sudo systemctl enable go-web-app
-            sudo systemctl start go-web-app
+            sudo systemctl restart go-web-app
 
             echo "✅ Checking service status..."
-            sudo systemctl status go-web-app --no-pager
+            sudo systemctl status go-web-app --no-pager || journalctl -xe --no-pager
 
