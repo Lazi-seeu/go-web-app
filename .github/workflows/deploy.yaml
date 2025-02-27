@@ -16,16 +16,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'  # ✅ Ensure correct Go version
+          go-version: '1.22'
 
       - name: Build Go Application
         run: |
           go build -o go-web-app main.go
 
-      - name: Setup SSH Key
+      - name: Setup SSH Key (Fix Permissions)
         run: |
           echo "${{ secrets.AWS_SSH_KEY }}" > key.pem
-          chmod 600 key.pem
+          chmod 600 key.pem  # 🔹 Fix permission error
 
       - name: Copy Files to AWS EC2 via SSH
         uses: appleboy/scp-action@master
@@ -51,39 +51,6 @@ jobs:
           username: ec2-user
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            set -e  # Stop script on any error
-
+            set -e  # Exit on error
             echo "✅ Stopping any existing service..."
-            sudo systemctl stop go-web-app || true
-
-            echo "✅ Moving new binary to /usr/local/bin..."
-            sudo mv /home/ec2-user/go-web-app /usr/local/bin/go-web-app
-            sudo chmod +x /usr/local/bin/go-web-app
-
-            echo "✅ Creating systemd service..."
-            sudo bash -c 'cat > /etc/systemd/system/go-web-app.service <<EOF
-            [Unit]
-            Description=Go Web Application
-            After=network.target
-
-            [Service]
-            ExecStart=/usr/local/bin/go-web-app -host 0.0.0.0 -port 8080
-            Restart=always
-            User=ec2-user
-            WorkingDirectory=/home/ec2-user
-            Environment=PORT=8080
-            StandardOutput=syslog
-            StandardError=syslog
-
-            [Install]
-            WantedBy=multi-user.target
-            EOF'
-
-            echo "✅ Reloading systemd and starting service..."
-            sudo systemctl daemon-reload
-            sudo systemctl enable go-web-app
-            sudo systemctl restart go-web-app
-
-            echo "✅ Checking service status..."
-            sudo systemctl status go-web-app --no-pager || journalctl -xe --no-pager
-
+            sudo systemc
